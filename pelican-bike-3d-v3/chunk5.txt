@@ -1,0 +1,69 @@
+ = new THREE.Group(); headPivot.position.set(.54,4.54,0); pelican.add(headPivot);
+    const head = mesh(new THREE.SphereGeometry(.47, 28, 18), MAT.cream, [0,0,0],[1.08,1,.96]); headPivot.add(head);
+    const cheek = mesh(new THREE.SphereGeometry(.18,16,10), MAT.feather, [.16,-.06,.28]); const cheek2=cheek.clone(); cheek2.position.z=-.28; headPivot.add(cheek, cheek2);
+    const eyeL=mesh(new THREE.SphereGeometry(.066,12,9), MAT.eye, [.2,.12,.36]); const eyeR=eyeL.clone(); eyeR.position.z=-.36; headPivot.add(eyeL, eyeR);
+    const irisMat = new THREE.MeshStandardMaterial({ color:0x9dd9dd, roughness:.25, emissive:0x14373d, emissiveIntensity:.35 });
+    const irisL=mesh(new THREE.SphereGeometry(.027,10,8), irisMat, [.245,.12,.42]); const irisR=irisL.clone(); irisR.position.z=-.42; headPivot.add(irisL, irisR);
+    const beakPivot = new THREE.Group(); beakPivot.position.set(.38,-.03,0); headPivot.add(beakPivot);
+    const beakUpper = mesh(new THREE.CapsuleGeometry(.11,1.55,5,10), MAT.orange, [.8,.03,0],[1,.62,1.32]); beakUpper.rotation.z=Math.PI/2; beakPivot.add(beakUpper);
+    const beakLower = mesh(new THREE.CapsuleGeometry(.08,1.22,5,10), MAT.orange, [.67,-.1,0],[1,.48,1]); beakLower.rotation.z=Math.PI/2; beakPivot.add(beakLower);
+    const pouch = mesh(new THREE.SphereGeometry(.37,22,16), MAT.pouch, [.64,-.21,0],[2.16,.54,.92]); beakPivot.add(pouch);
+    for(let i=0;i<5;i++){ const crest = mesh(new THREE.BoxGeometry(.35,.03,.06), MAT.featherDark, [-.08,-.02 + i*.08,0]); crest.rotation.z = -1.1 + i*.12; crest.position.set(-.1 - i*.06, .28 + i*.06, 0); headPivot.add(crest); crest.userData.crest = i; }
+
+    const wingL = new THREE.Group(), wingR = new THREE.Group(); wingL.position.set(-.42,3.46,.67); wingR.position.set(-.42,3.46,-.67); pelican.add(wingL, wingR);
+    function buildWing(side){
+      const wing = new THREE.Group();
+      wing.add(mesh(new THREE.SphereGeometry(.58,22,16), MAT.feather, [0,0,0],[1.3,.55,.35]));
+      for(let row=0; row<3; row++) for(let i=0; i<5; i++){
+        const f = mesh(new THREE.CapsuleGeometry(.055,.55 + i*.07,4,8), row===0?MAT.featherDark:MAT.feather, [-.14-i*.16,-.08-row*.08,0],[1,1,.6]);
+        f.rotation.z = Math.PI/2.6 - i*.05 + row*.03;
+        f.userData.phase = Math.random()*Math.PI*2;
+        wing.add(f);
+      }
+      return wing;
+    }
+    wingL.add(buildWing('L')); wingR.add(buildWing('R'));
+
+    // Body feathers instanced-ish using groups
+    const bodyFeathers = [];
+    const featherGeo = new THREE.CapsuleGeometry(.035,.22,4,6);
+    for(let ring=0; ring<7; ring++){
+      for(let i=0; i<9; i++){
+        const f = mesh(featherGeo, ring<2?MAT.featherDark:MAT.feather, [-.55 + ring*.12, 2.96 + Math.sin(i/9*Math.PI*2)*.34, Math.cos(i/9*Math.PI*2)*.42],[1,1,.55]);
+        f.rotation.z = 1.2 + ring*.08; f.rotation.x = (i/9*Math.PI*2); f.userData.baseY=f.position.y; f.userData.phase=Math.random()*Math.PI*2; pelican.add(f); bodyFeathers.push(f);
+      }
+    }
+
+    const legMat = new THREE.MeshStandardMaterial({ color:0xff9a38, roughness:.75 });
+    const legRig=[];
+    function makeLeg(z){
+      const root = new THREE.Group(); root.position.set(-.1,2.88,z); pelican.add(root);
+      const upperG = new THREE.Group(); const lowerG = new THREE.Group(); const footG = new THREE.Group();
+      const upperMesh = mesh(new THREE.CylinderGeometry(.07,.085,.56,9), legMat, [0,-.28,0]);
+      const lowerMesh = mesh(new THREE.CylinderGeometry(.06,.07,.52,9), legMat, [0,-.26,0]);
+      const foot = mesh(new THREE.CapsuleGeometry(.075,.42,4,8), legMat, [.22,-.05,0],[1,.7,1]); foot.rotation.z=Math.PI/2;
+      upperG.add(upperMesh); lowerG.add(lowerMesh); footG.add(foot); root.add(upperG); root.add(lowerG); root.add(footG);
+      const knee = new THREE.Vector3();
+      legRig.push({ root, upperG, lowerG, footG, knee, side: z>0 ? 1 : -1, upperLen:.56, lowerLen:.52, foot });
+    }
+    makeLeg(.28); makeLeg(-.28);
+
+    const scarf = new THREE.Group(); scarf.position.set(.14,4.02,0); pelican.add(scarf);
+    const scarfBand = mesh(new THREE.TorusGeometry(.29,.055,8,22), MAT.red); scarfBand.rotation.x = Math.PI/2; scarf.add(scarfBand);
+    const scarfTail1 = mesh(new THREE.BoxGeometry(.75,.14,.08), MAT.red, [-.38,-.08,.08]); scarfTail1.rotation.z=.15; scarf.add(scarfTail1);
+    const scarfTail2 = mesh(new THREE.BoxGeometry(.42,.1,.07), MAT.red, [-.76,-.12,.11]); scarfTail2.rotation.z=.28; scarf.add(scarfTail2);
+
+    // Dust and speed lines
+    const dustCount = isMobile ? 60 : 100; const dustPos = new Float32Array(dustCount*3);
+    for(let i=0;i<dustCount;i++){ dustPos[i*3]=-2-Math.random()*9; dustPos[i*3+1]=.12+Math.random()*.6; dustPos[i*3+2]=(Math.random()-.5)*3.4; }
+    const dustGeo = new THREE.BufferGeometry(); dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos,3));
+    const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color:0xeedcb2, size:.05, transparent:true, opacity:.48 })); scene.add(dust);
+    const lineCount = isMobile ? 30 : 44; const linePos = new Float32Array(lineCount*6);
+    const speedLinesGeo = new THREE.BufferGeometry(); speedLinesGeo.setAttribute('position', new THREE.BufferAttribute(linePos,3));
+    const speedLines = new THREE.LineSegments(speedLinesGeo, new THREE.LineBasicMaterial({ color:0xd4f3ff, transparent:true, opacity:.0 })); scene.add(speedLines);
+
+    // Interactivity state
+    let speed=24, paused=false, day=.72, wind=.66, camMode='director', distance=0, boost=0, directorLocked=false;
+    const speedEl=$('#speed'), speedValue=$('#speedValue'), speedText=$('#speedText'), distanceText=$('#distanceText'), dayEl=$('#day'), dayValue=$('#dayValue'), windEl=$('#wind'), windValue=$('#windValue'), fpsText=$('#fpsText'), shotText=$('#shotText');
+    speedEl.addEventListener('input',()=>{ speed=+speedEl.value; speedValue.textContent=`${speed} km/h`; speedText.textContent=speed.toFixed(1); directorLocked=true; });
+    dayEl.addEventListener('input',()=>{ day=+dayEl.value; dayValue.textContent=day<.26?'Night':day<.5?'Morning'
