@@ -1,0 +1,65 @@
+:day<.82?'Golden':'Noon'; directorLocked=true; });
+    windEl.addEventListener('input',()=>{ wind=+windEl.value; windValue.textContent=`${Math.round(wind*100)}%`; directorLocked=true; });
+    $('#cameraButtons').addEventListener('click', e=>{ const b=e.target.closest('[data-cam]'); if(!b) return; camMode=b.dataset.cam; document.querySelectorAll('[data-cam]').forEach(x=>x.classList.toggle('active', x===b)); controls.enabled = camMode==='orbit'; directorLocked = camMode!=='director'; if(camMode==='director') directorLocked=false; });
+    $('#bloomBtn').onclick=()=>{ bloomEnabled=!bloomEnabled; $('#bloomBtn').classList.toggle('active', bloomEnabled); };
+    $('#pauseBtn').onclick=()=>{ paused=!paused; $('#pauseBtn').textContent = paused ? '▶ 继续' : 'Ⅱ 暂停'; };
+    $('#fullBtn').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+    $('#shotBtn').onclick=()=>{ renderer.render(scene,camera); const a=document.createElement('a'); a.download='pelican-rider-v3.png'; a.href=renderer.domElement.toDataURL('image/png'); a.click(); flash('V3 已抓拍 📸'); };
+    $('#boostBtn').onclick=()=>{ boost = 1.9; $('#boostBtn').classList.add('hot'); setTimeout(()=>$('#boostBtn').classList.remove('hot'), 900); flash('BOOST! 镜头推进中 ⚡'); };
+    function bell(){ const ac = new (window.AudioContext||window.webkitAudioContext)(); const now = ac.currentTime; for(const [f,d,gain] of [[720,0,.14],[1180,.035,.08],[1620,.08,.05]]){ const o=ac.createOscillator(), g=ac.createGain(); o.type='sine'; o.frequency.value=f; g.gain.setValueAtTime(gain, now+d); g.gain.exponentialRampToValueAtTime(.0001, now+d+.65); o.connect(g).connect(ac.destination); o.start(now+d); o.stop(now+d+.68); } flash('叮！鹈鹕骑手向你致意 🔔'); }
+    $('#bell').onclick=bell;
+    let toastTimer; function flash(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1700); }
+
+    const raycaster=new THREE.Raycaster(), pointer=new THREE.Vector2();
+    renderer.domElement.addEventListener('pointerdown', e=>{
+      pointer.x=e.clientX/innerWidth*2-1; pointer.y=-(e.clientY/innerHeight)*2+1; raycaster.setFromCamera(pointer,camera);
+      if(raycaster.intersectObject(head,true).length || raycaster.intersectObject(body,true).length){ beakLower.rotation.z = -.18; headPivot.rotation.z += .05; setTimeout(()=>{ beakLower.rotation.z=0; }, 160); bell(); }
+    });
+
+    // Camera / director system
+    const desiredPos = new THREE.Vector3(), desiredTarget = new THREE.Vector3(); let cinemaAngle = 0;
+    const directorShots = [
+      { key:'A1', len:5, mode:'follow' },
+      { key:'B2', len:4, mode:'low' },
+      { key:'C3', len:4, mode:'side' },
+      { key:'D4', len:5, mode:'drone' },
+    ];
+    function activeShot(t){ let sum=0; const total=directorShots.reduce((a,b)=>a+b.len,0); let x=t%total; for(const s of directorShots){ sum += s.len; if(x<sum) return s; } return directorShots[0]; }
+
+    function updateCamera(dt,t){
+      let mode = camMode;
+      let shotKey = 'MAN';
+      if(camMode==='director' && !directorLocked){ const shot = activeShot(t*.34 + boost*.7); mode = shot.mode; shotKey = shot.key; }
+      shotText.textContent = shotKey;
+      if(mode==='orbit'){ controls.update(); return; }
+      if(mode==='follow'){ desiredPos.set(-8.15,4.75,9.6); desiredTarget.set(.1,2.62,0); }
+      else if(mode==='side'){ desiredPos.set(-1.4,3.55,10.4); desiredTarget.set(.2,2.6,0); }
+      else if(mode==='low'){ desiredPos.set(3.8,1.85,5.2); desiredTarget.set(-.12,2.3,0); }
+      else if(mode==='drone'){ desiredPos.set(-1.1,10.8,4.2); desiredTarget.set(0,1.4,0); }
+      if(camMode==='director' && !directorLocked && mode!=='orbit' && shotKey==='C3'){ cinemaAngle += dt*.75; desiredPos.x += Math.cos(cinemaAngle)*.85; desiredPos.z += Math.sin(cinemaAngle)*.95; }
+      if(boost>0){ const n = Math.min(boost,1.2); desiredPos.z -= n*1.6; desiredPos.x += n*.3; camera.fov = 46 + n*6; } else camera.fov += (46 - camera.fov)*Math.min(1,dt*4.5);
+      camera.updateProjectionMatrix();
+      camera.position.lerp(desiredPos,1-Math.exp(-dt*2.8)); controls.target.lerp(desiredTarget,1-Math.exp(-dt*3.1)); camera.lookAt(controls.target);
+    }
+
+    // Lighting / grade
+    const cDayTop = new THREE.Color(0x8bd4ff), cDayMid = new THREE.Color(0xd9f2ff), cSunsetTop = new THREE.Color(0x3759a5), cSunsetMid = new THREE.Color(0xffb46f), cNightTop = new THREE.Color(0x07162f), cNightMid = new THREE.Color(0x20335a), cBottom = new THREE.Color(0xf4e1ba);
+    function updateLighting(){
+      let top, mid; if(day<.45){ const k=day/.45; top=cNightTop.clone().lerp(cSunsetTop,k); mid=cNightMid.clone().lerp(cSunsetMid,k); } else { const k=(day-.45)/.55; top=cSunsetTop.clone().lerp(cDayTop,k); mid=cSunsetMid.clone().lerp(cDayMid,k); }
+      skyMat.uniforms.topColor.value.copy(top); skyMat.uniforms.midColor.value.copy(mid); skyMat.uniforms.bottomColor.value.copy(cBottom); skyMat.uniforms.dayMix.value=day;
+      scene.background = mid.clone().lerp(top,.45);
+      scene.fog.color.copy(scene.background.clone().lerp(new THREE.Color(0xb5c9bf), .22));
+      sun.intensity = .3 + day*4.9; hemi.intensity = .35 + day*1.8; rim.intensity = .42 + day*.9;
+      sun.color.set(day<.5?0xffb97e:0xffe4bc); sunDisc.material.color.setHSL(.1,.9,.6+day*.15);
+      renderer.toneMappingExposure = .72 + day*.54 + boost*.06;
+      seaMat.uniforms.dayMix.value = day;
+      seaMat.uniforms.colA.value.set(day<.45?0x196686:0x2ca5c2); seaMat.uniforms.colB.value.set(day<.45?0x0c3652:0x115f7f);
+    }
+
+    function solveLeg(leg, target){
+      const root = leg.root.getWorldPosition(new THREE.Vector3());
+      const tar = target.clone();
+      const dx = tar.x - root.x; const dy = tar.y - root.y; const dist = clamp(Math.hypot(dx,dy), .05, leg.upperLen + leg.lowerLen - .001);
+      const base = Math.atan2(dy, dx);
+      const cosKnee = clamp((leg.upperLen**2 + dist**2 - leg.lowerLen**2)/(2*leg.upperLen*dist), -1, 1);
+      co
