@@ -1,0 +1,75 @@
+k); flocks.push(flock);
+    }
+
+    // Bike
+    const bike = new THREE.Group(); bike.position.y = .02; scene.add(bike);
+    const wheels=[];
+    function makeWheel(x){
+      const g = new THREE.Group(); g.position.set(x, 1.08, 0);
+      const tire = mesh(new THREE.TorusGeometry(1.05,.11,14,54), MAT.black); g.add(tire);
+      const rimM = mesh(new THREE.TorusGeometry(.91,.03,8,54), MAT.steel); g.add(rimM);
+      const hub = mesh(new THREE.CylinderGeometry(.11,.11,.34,16), MAT.steel); hub.rotation.x=Math.PI/2; g.add(hub);
+      for(let i=0;i<18;i++){ const a=i/18*Math.PI*2; g.add(tube(new THREE.Vector3(0,0,0), new THREE.Vector3(Math.cos(a)*.9, Math.sin(a)*.9,0), .008, MAT.steel, 5)); }
+      bike.add(g); wheels.push(g); return g;
+    }
+    const rear=makeWheel(-1.56), front=makeWheel(1.56);
+    const A=new THREE.Vector3(-1.16,1.18,0), B=new THREE.Vector3(-.18,2.18,0), C=new THREE.Vector3(.08,1.12,0), D=new THREE.Vector3(.94,2.02,0), E=new THREE.Vector3(1.56,1.08,0);
+    for(const [a,b,r] of [[A,B,.075],[B,C,.075],[C,A,.075],[B,D,.07],[C,D,.07],[D,E,.065]]) bike.add(tube(a,b,r,MAT.teal));
+    const fork1=tube(new THREE.Vector3(.94,2.02,-.11), new THREE.Vector3(1.56,1.08,-.11), .045, MAT.steel); bike.add(fork1); const fork2=fork1.clone(); fork2.position.z=.11; bike.add(fork2);
+    bike.add(tube(new THREE.Vector3(-.18,2.18,0), new THREE.Vector3(-.36,2.54,0), .05, MAT.steel));
+    const seat = mesh(new THREE.CapsuleGeometry(.17,.58,6,10), MAT.black, [-.41,2.58,0],[1,.52,1]); seat.rotation.z=Math.PI/2; bike.add(seat);
+    bike.add(tube(new THREE.Vector3(.94,2.02,0), new THREE.Vector3(1.05,2.58,0), .05, MAT.steel));
+    const handle = mesh(new THREE.TorusGeometry(.37,.038,8,28,Math.PI), MAT.steel, [1.1,2.66,0]); handle.rotation.y=Math.PI/2; handle.rotation.z=-Math.PI/2; bike.add(handle);
+    bike.add(mesh(new THREE.BoxGeometry(.18,.12,.12), MAT.black, [1.18,2.71,.33])); bike.add(mesh(new THREE.BoxGeometry(.18,.12,.12), MAT.black, [1.18,2.71,-.33]));
+
+    // Chainring / crank / pedals
+    const crank = mesh(new THREE.CylinderGeometry(.17,.17,.11,20), MAT.steel, [.1,1.12,0]); crank.rotation.x=Math.PI/2; bike.add(crank);
+    const chainring = mesh(new THREE.TorusGeometry(.46,.03,6,42), MAT.steel, [.1,1.12,0]); chainring.rotation.x=Math.PI/2; bike.add(chainring);
+    const pedalGroup = new THREE.Group(); pedalGroup.position.set(.1,1.12,0); bike.add(pedalGroup);
+    const pedals=[];
+    for(const phase of [0,Math.PI]){
+      const arm = new THREE.Group();
+      arm.add(mesh(new THREE.BoxGeometry(.64,.05,.05), MAT.steel, [.32,0,0]));
+      const pd = mesh(new THREE.BoxGeometry(.29,.055,.16), MAT.black, [.65,0,0]); arm.add(pd);
+      arm.rotation.z = phase; pedalGroup.add(arm); pedals.push(arm);
+    }
+    const rearCog = mesh(new THREE.TorusGeometry(.2,.02,6,28), MAT.steel, [-1.47,1.08,0]); rearCog.rotation.x=Math.PI/2; bike.add(rearCog);
+
+    // Chain links along oval path
+    const chainLinks=[];
+    function chainPoint(u){
+      const R=.46, r=.2, c1=new THREE.Vector2(.1,1.12), c2=new THREE.Vector2(-1.47,1.08);
+      const d=c2.x-c1.x- R - r, up=.14, dn=-.14;
+      const lenArc1=Math.PI*(R+r), lenArc2=Math.PI*(R+r), lenTop=Math.hypot(d,up), lenBot=Math.hypot(d,-dn), total=lenArc1+lenArc2+lenTop+lenBot;
+      let s=((u%1)+1)%1*total;
+      if(s<lenArc1){ const a=Math.PI/2 - s/(R+r); return new THREE.Vector3(c1.x + Math.cos(a)*R, c1.y + Math.sin(a)*R, 0); }
+      s-=lenArc1;
+      if(s<lenTop){ const t=s/lenTop; return new THREE.Vector3(c1.x + R + d*t, c1.y + up*(1-t), 0); }
+      s-=lenTop;
+      if(s<lenArc2){ const a=-Math.PI/2 + s/(R+r); return new THREE.Vector3(c2.x + Math.cos(a)*r, c2.y + Math.sin(a)*r, 0); }
+      s-=lenArc2;
+      const t=s/lenBot; return new THREE.Vector3(c2.x - r - d*t, c2.y + dn*(1-t), 0);
+    }
+    const chainCount = isMobile ? 44 : 60;
+    for(let i=0;i<chainCount;i++){
+      const link = mesh(new THREE.BoxGeometry(.08,.03,.12), new THREE.MeshStandardMaterial({ color:0x94aab2, metalness:.92, roughness:.28 }));
+      bike.add(link); chainLinks.push(link);
+    }
+
+    // Basket accent
+    const basket = new THREE.Group(); basket.position.set(-1.78,2.0,0); basket.add(mesh(new THREE.BoxGeometry(.74,.57,.66), MAT.tan));
+    for(let i=-2;i<=2;i++) basket.add(mesh(new THREE.BoxGeometry(.68,.025,.035), MAT.steel, [0,i*.11,.35])); bike.add(basket);
+
+    // Soft blob shadow
+    const shadowCanvas = document.createElement('canvas'); shadowCanvas.width=256; shadowCanvas.height=256; const sctx=shadowCanvas.getContext('2d'); const grad=sctx.createRadialGradient(128,128,18,128,128,128); grad.addColorStop(0,'rgba(0,0,0,.45)'); grad.addColorStop(.45,'rgba(0,0,0,.18)'); grad.addColorStop(1,'rgba(0,0,0,0)'); sctx.fillStyle=grad; sctx.fillRect(0,0,256,256);
+    const shadowTex = new THREE.CanvasTexture(shadowCanvas); const blobShadow = new THREE.Mesh(new THREE.PlaneGeometry(5.9,3.5), new THREE.MeshBasicMaterial({ map:shadowTex, transparent:true, depthWrite:false })); blobShadow.rotation.x=-Math.PI/2; blobShadow.position.set(.05,.06,0); scene.add(blobShadow);
+
+    // Pelican rider
+    const pelican = new THREE.Group(); pelican.position.set(-.18,0,0); bike.add(pelican);
+    const body = mesh(new THREE.SphereGeometry(.73, 34, 24), MAT.cream, [-.35,3.28,0], [1.17,1.3,.95]); pelican.add(body);
+    const belly = mesh(new THREE.SphereGeometry(.54, 24, 18), MAT.feather, [-.18,3.02,0], [1.08,1.02,.96]); pelican.add(belly);
+    const back = mesh(new THREE.SphereGeometry(.43,22,16), MAT.featherDark, [-.58,3.42,0],[1.2,.78,.9]); pelican.add(back);
+    const tailPivot = new THREE.Group(); tailPivot.position.set(-1.03,3.18,0); pelican.add(tailPivot);
+    for(let i=0;i<5;i++){ const f=mesh(new THREE.BoxGeometry(.62,.06,.12), i<2?MAT.featherDark:MAT.feather, [-.18+i*.03, -.08+i*.05, (i-2)*.08]); f.rotation.z = Math.PI/2 + (i-2)*.07; tailPivot.add(f); }
+    const neck = mesh(new THREE.CapsuleGeometry(.23,1.16,8,16), MAT.cream, [.2,3.94,0],[1,.94,1]); neck.rotation.z=-.33; pelican.add(neck);
+    const headPivot
