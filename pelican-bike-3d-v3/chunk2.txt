@@ -1,0 +1,92 @@
+iv></section>
+    <div class="hint"><span class="statusDot"></span>导演模式会自动切镜 · 点击鹈鹕会叫 · BOOST 适合低机位</div>
+    <div id="toast" class="toast">Pelican Rider V3 已待命。</div>
+    <section class="controls panel">
+      <div class="row" id="cameraButtons">
+        <button data-cam="director" class="active">导演</button><button data-cam="follow">跟拍</button><button data-cam="side">侧拍</button><button data-cam="low">低机位</button><button data-cam="drone">无人机</button><button data-cam="orbit">自由</button>
+        <button id="boostBtn">⚡ BOOST</button><button id="bell">🔔 车铃</button><button id="bloomBtn" class="active">✦ 光晕</button><button id="pauseBtn">Ⅱ 暂停</button><button id="shotBtn">⌁ 截图</button><button id="fullBtn">⛶ 全屏</button>
+      </div>
+      <div class="row">
+        <div class="slider grow"><span>速度</span><input id="speed" type="range" min="0" max="54" value="24" step="1"><strong id="speedValue">24 km/h</strong></div>
+        <div class="slider grow"><span>风力</span><input id="wind" type="range" min="0" max="1" value="0.66" step="0.01"><strong id="windValue">66%</strong></div>
+        <div class="slider grow"><span>时间</span><input id="day" type="range" min="0" max="1" value="0.72" step="0.01"><strong id="dayValue">Golden</strong></div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+    const $ = s => document.querySelector(s);
+    const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+    const isMobile = matchMedia('(max-width:760px)').matches;
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x9ac8cf, 0.009);
+
+    const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, .1, 600);
+    camera.position.set(-8, 4.6, 10.2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, preserveDrawingBuffer:true, powerPreference:'high-performance' });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.4 : 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.02;
+    document.body.prepend(renderer.domElement);
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), .05).texture;
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = .05;
+    controls.target.set(0,2.45,0);
+    controls.minDistance = 4;
+    controls.maxDistance = 36;
+    controls.maxPolarAngle = Math.PI*.49;
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight), .34, .75, .8);
+    composer.addPass(bloom);
+    let bloomEnabled = true;
+
+    const hemi = new THREE.HemisphereLight(0xcbeeff, 0x587248, 1.9); scene.add(hemi);
+    const sun = new THREE.DirectionalLight(0xffe2ba, 4.2); sun.position.set(-14, 18, 10); sun.castShadow = true; sun.shadow.mapSize.set(isMobile?1024:2048, isMobile?1024:2048); sun.shadow.camera.left=-24; sun.shadow.camera.right=24; sun.shadow.camera.top=24; sun.shadow.camera.bottom=-24; scene.add(sun);
+    const rim = new THREE.DirectionalLight(0x7bcfff, .9); rim.position.set(8,6,-14); scene.add(rim);
+
+    const MAT = {
+      cream: new THREE.MeshStandardMaterial({ color:0xf5f0de, roughness:.72 }),
+      feather: new THREE.MeshStandardMaterial({ color:0xdbe6e9, roughness:.78 }),
+      featherDark: new THREE.MeshStandardMaterial({ color:0xbcccd1, roughness:.82 }),
+      orange: new THREE.MeshStandardMaterial({ color:0xff8f2c, roughness:.55 }),
+      pouch: new THREE.MeshPhysicalMaterial({ color:0xffab56, roughness:.7, transmission:.04, transparent:true, opacity:.95 }),
+      black: new THREE.MeshStandardMaterial({ color:0x131b26, metalness:.18, roughness:.35 }),
+      steel: new THREE.MeshStandardMaterial({ color:0xbfd6de, metalness:.88, roughness:.24 }),
+      teal: new THREE.MeshStandardMaterial({ color:0x18c9ca, metalness:.26, roughness:.32 }),
+      red: new THREE.MeshStandardMaterial({ color:0xff5568, metalness:.12, roughness:.4 }),
+      tan: new THREE.MeshStandardMaterial({ color:0x8e6139, roughness:.84 }),
+      eye: new THREE.MeshStandardMaterial({ color:0x061018, roughness:.18, metalness:.02 }),
+      road: new THREE.MeshStandardMaterial({ color:0x273540, roughness:.94 }),
+      line: new THREE.MeshStandardMaterial({ color:0xeaf6f0, roughness:.75, emissive:0x0f1e20, emissiveIntensity:.25 }),
+      yellow: new THREE.MeshStandardMaterial({ color:0xffca4c, roughness:.74, emissive:0x352a08, emissiveIntensity:.16 }),
+      grass: new THREE.MeshStandardMaterial({ color:0x5e8d5c, roughness:1 }),
+      cliff: new THREE.MeshStandardMaterial({ color:0x7f7a71, roughness:.96 }),
+      bark: new THREE.MeshStandardMaterial({ color:0x64472f, roughness:.95 }),
+      leaf: new THREE.MeshStandardMaterial({ color:0x628a5f, roughness:.95 })
+    };
+
+    const shadow = o => { o.castShadow = true; o.receiveShadow = true; return o; };
+    const mesh = (g,m,p=[0,0,0],s=[1,1,1]) => { const o = shadow(new THREE.Mesh(g,m)); o.position.set(...p); o.scale.set(...s); return o; };
+    function tube(a,b,r,material=MAT.steel,radial=10){
+      const d = new THREE.Vector3().subVectors(b,a), mid = new THREE.Vector3().addVectors(a,b).multiplyScalar(.5);
+      const o = mesh(new THREE.CylinderGeometry(r,r,d.length(),radial), material);
+    
