@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#050d18" />
+  <title>Pelican Rider V3 · 鹈鹕骑行 3D</title>
+  <style>
+    :root{--glass:rgba(5,13,24,.62);--line:rgba(255,255,255,.13);--text:#f4fbff;--muted:rgba(231,246,255,.68);--cyan:#79ecff;--amber:#ffc872;--vio:#a68fff;--green:#7cffc1}
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050d18;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+    canvas{display:block;width:100%;height:100%;touch-action:none}
+    .hud{position:fixed;inset:0;pointer-events:none;z-index:10}
+    .panel{border:1px solid var(--line);background:linear-gradient(135deg,rgba(7,18,32,.84),rgba(7,18,32,.38));backdrop-filter:blur(18px);box-shadow:0 18px 65px rgba(0,0,0,.28)}
+    .brand{position:absolute;left:18px;top:18px;padding:14px 16px;border-radius:18px;max-width:420px}.brandTop{display:flex;align-items:center;gap:8px}.eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);font-weight:800}.v3{padding:3px 7px;border-radius:999px;background:linear-gradient(135deg,#67ebff,#b594ff);font-size:9px;font-weight:900;color:#07101c;letter-spacing:.08em}.brand h1{font-size:22px;line-height:1.05;margin:7px 0 4px;letter-spacing:-.03em}.brand p{margin:0;color:var(--muted);font-size:11px;line-height:1.5}
+    .metric{position:absolute;right:18px;top:18px;display:grid;grid-template-columns:repeat(4,minmax(72px,1fr));gap:6px;padding:9px;border-radius:16px}.metric div{padding:7px 8px}.metric span{display:block;font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}.metric b{display:block;margin-top:2px;font-size:16px;font-variant-numeric:tabular-nums}
+    .controls{pointer-events:auto;position:absolute;left:50%;bottom:16px;transform:translateX(-50%);width:min(1130px,calc(100% - 18px));padding:11px;border-radius:22px}.row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.row+.row{margin-top:8px}
+    button{appearance:none;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.055);color:var(--text);border-radius:12px;padding:8px 10px;font:inherit;font-size:11px;cursor:pointer;transition:.18s transform,.18s background,.18s border-color,.18s box-shadow;user-select:none}button:hover{transform:translateY(-1px);background:rgba(255,255,255,.1);border-color:rgba(121,236,255,.4)}button.active{background:rgba(121,236,255,.16);border-color:rgba(121,236,255,.56)}button.hot{background:rgba(255,190,90,.16);border-color:rgba(255,190,90,.5);box-shadow:0 0 28px rgba(255,175,60,.17)}button.ghost{color:var(--muted)}
+    .grow{flex:1;min-width:160px}.slider{display:flex;align-items:center;gap:8px;padding:0 4px;color:var(--muted);font-size:10px}.slider input{width:100%;accent-color:#79ecff}.slider strong{min-width:60px;text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
+    .hint{position:absolute;left:18px;bottom:131px;color:rgba(240,249,255,.54);font-size:10px;text-shadow:0 2px 9px rgba(0,0,0,.68)}.statusDot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 15px var(--green);margin-right:6px;vertical-align:1px}
+    .toast{position:absolute;left:50%;top:17%;transform:translate(-50%,-10px);opacity:0;padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(4,12,22,.82);backdrop-filter:blur(15px);font-size:11px;transition:.28s;white-space:nowrap}.toast.show{opacity:1;transform:translate(-50%,0)}
+    .loader{position:fixed;inset:0;display:grid;place-items:center;background:#050d18;z-index:30;transition:.55s opacity}.loader.hide{opacity:0;pointer-events:none}.loaderCard{text-align:center}.ring{width:62px;height:62px;margin:0 auto 14px;border-radius:50%;border:2px solid rgba(255,255,255,.1);border-top-color:#79ecff;border-right-color:#b594ff;animation:spin 1s linear infinite}.loaderCard b{font-size:14px}.loaderCard p{margin:6px 0 0;color:var(--muted);font-size:10px;line-height:1.4}@keyframes spin{to{transform:rotate(360deg)}}
+    .scan{position:fixed;inset:0;pointer-events:none;z-index:8;background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0,rgba(255,255,255,.012) 1px,transparent 1px,transparent 4px);mix-blend-mode:soft-light;opacity:.26}.vignette{position:fixed;inset:0;pointer-events:none;z-index:7;background:radial-gradient(circle at 50% 45%, transparent 40%, rgba(0,0,0,.16) 76%, rgba(0,0,0,.38) 100%)}
+    @media(max-width:760px){.brand{left:10px;top:10px;padding:11px 12px;max-width:78vw}.brand p{display:none}.brand h1{font-size:16px}.metric{right:10px;top:10px;grid-template-columns:1fr}.metric div:nth-child(n+2){display:none}.controls{bottom:8px;padding:9px}.hint{display:none}.grow{flex-basis:100%}.row{gap:5px}button{padding:7px 8px;font-size:10px}}
+  </style>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
+</head>
+<body>
+  <div class="scan"></div>
+  <div class="vignette"></div>
+  <div id="loader" class="loader"><div class="loaderCard"><div class="ring"></div><b>正在导演 Pelican Rider V3</b><p>Director Mode · Coastal World · Feather Layers · IK Legs · Dynamic Chain · WebGL</p></div></div>
+  <div class="hud">
+    <section class="brand panel"><div class="brandTop"><div class="eyebrow">Cinematic Procedural WebGL</div><span class="v3">V3</span></div><h1>Pelican Rider / 鹈鹕骑行</h1><p>导演镜头 / 海岸公路 / 层次化羽毛 / 脚踏 IK / 动态链条 / 高级卡通 3D 气质</p></section>
+    <section class="metric panel"><div><span>Speed</span><b id="speedText">24.0</b></div><div><span>Distance</span><b id="distanceText">0.00 km</b></div><div><span>FPS</span><b id="fpsText">60</b></div><div><span>Shot</span><b id="shotText">A1</b></d
